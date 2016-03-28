@@ -1,0 +1,7 @@
+{
+  "version": "0.0.0",
+  "name": "Svoyak",
+  "appPath": "src/main/webapp/",
+  "dependencies": {
+  }
+}
