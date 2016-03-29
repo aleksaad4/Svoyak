@@ -77,7 +77,7 @@ var config = {
     uri: 'http://localhost:'
 };
 
-// clean task
+// clean task - очищаем папку dist
 gulp.task('clean', function () {
     return gulp
         .src(config.dist, {read: false})
@@ -96,6 +96,7 @@ gulp.task('sass', function () {
             // компилируем sass файлы
             .pipe(sass({includePaths: config.bower}).on('error', sass.logError))
             // сохраняем их в cssDir
+            // todo: сохранять generated файлы в другую папку
             .pipe(gulp.dest(config.cssDir)),
         // скопируем font-ы из bower-а
         gulp.src(config.bower + '**/fonts/**/*.{woff,woff2,svg,ttf,eot,otf}')
@@ -103,6 +104,7 @@ gulp.task('sass', function () {
             .pipe(changed(config.fontsDir))
             // исправляем относительные пути
             .pipe(flatten())
+            // todo: сохранять generated файлы в другую папку
             // сохраняем шрифты в fontsDir
             .pipe(gulp.dest(config.fontsDir))
     );
@@ -110,6 +112,7 @@ gulp.task('sass', function () {
 
 // таск для подготовки стилей
 gulp.task('styles', ['sass'], function () {
+    // todo: тут какая то хрень, мы ж не таргет поменяли?
     return gulp.src(config.cssDir)
         // кидаем sync
         .pipe(browserSync.reload({stream: true}));
@@ -124,10 +127,11 @@ gulp.task('html', function () {
         // копируем их в файл templates.js
         .pipe(templateCache("templates.js", {module: "svoyakApp"}))
         // копируем в targetTmp
+        // todo: сохранять в папку ко всем скриптам в таргете?
         .pipe(gulp.dest(config.targetTmp));
 });
 
-
+// todo: к коду выше использовать параметры из этого таска???
 // обработаем все скрипты и склеим их в два файла - свой и чужой
 gulp.task('scripts', ['ngtemplates'], function () {
     var uglifySettings = {
@@ -152,6 +156,7 @@ gulp.task('scripts', ['ngtemplates'], function () {
         }
     };
 
+    // todo: написать таск по обработке скриптов
     gulp.src([tvguide.app + "external/**/*.js", "!" + tvguide.app + "external/jquery/**/*.js"])
         .pipe(order(["angular/**/*.js"], {base: tvguide.app + "external/"}))
         .pipe(concat('external.js'))
@@ -174,6 +179,9 @@ gulp.task('scripts', ['ngtemplates'], function () {
         ], {base: tvguide.app + "js/"})).pipe(concat('tvguide.js')).pipe(ngAnnotate()).pipe(uglify(uglifySettings)).pipe(gulp.dest(tvguide.app + 'js/final/'));
 });
 
+// todo: написать таск копирующий css-ы в таргет
+
+// todo: подумать как быть с картинками и куда их складывать лучше и как это задать
 // таск по обработке картинок
 gulp.task('images', function () {
     // все из папки imagesSrc
@@ -197,5 +205,8 @@ gulp.task('images', function () {
         .pipe(browserSync.reload({stream: true}));
 });
 
+// todo: разобраться с дефолтным таском 
 //gulp.task('default', ['bower-installer', 'copy', 'less', 'styles', 'ngtemplates', 'scripts', 'images']);
 gulp.task('default', ['copy', 'less', 'styles', 'ngtemplates', 'scripts', 'images']);
+
+// todo: собственно написать copy скрипт?
