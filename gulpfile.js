@@ -1,191 +1,134 @@
 'use strict';
 
 var gulp = require('gulp'),
-// This plugin is intended for testing other gulp plugin
-    expect = require('gulp-expect-file'),
-// Gulp plugin for sass
-    sass = require('gulp-sass'),
-// Static asset revisioning by appending content hash to filenames: unicorn.css =&gt; unicorn-d41d8cd98f.css
-    rev = require('gulp-rev'),
-// Concatenates and registers AngularJS templates in the $templateCache
-    templateCache = require('gulp-angular-templatecache'),
-// gulp plugin to minify HTML
-    htmlmin = require('gulp-htmlmin'),
-// Minify PNG, JPEG, GIF and SVG images
+    prefix = require('gulp-autoprefixer'),
+    less = require('gulp-less'),
+    minifyCss = require('gulp-minify-css'),
+    minifyHtml = require('gulp-minify-html'),
+
+    usemin = require('gulp-usemin'),
+    uglify = require('gulp-uglify'),
     imagemin = require('gulp-imagemin'),
-// A gulp plugin for processing files with ESLint
-    eslint = require('gulp-eslint'),
-// construct pipes of streams of events
+    order = require("gulp-order"),
+    templateCache = require('gulp-angular-templatecache'),
+    ngAnnotate = require('gulp-ng-annotate'),
+    jshint = require('gulp-jshint'),
+    rev = require('gulp-rev'),
     es = require('event-stream'),
-// remove or replace relative path for files
+    concat = require('gulp-concat'),
     flatten = require('gulp-flatten'),
-// Delete files/folders using globs
-    del = require('del'),
-// Wire Bower dependencies to your source code
-    wiredep = require('wiredep').stream,
-// Run a series of dependent gulp tasks in order
-    runSequence = require('run-sequence'),
-// Live CSS Reload &amp; Browser Syncing
-    browserSync = require('browser-sync'),
-// Prevent pipe breaking caused by errors from gulp plugins
-    plumber = require('gulp-plumber'),
-// Only pass through changed files
-    changed = require('gulp-changed'),
-// Conditionally run a task
-    gulpIf = require('gulp-if'),
-// A javascript, stylesheet and webcomponent injection plugin for Gulp, i.e. inject file references into your index.html
-    inject = require('gulp-inject'),
-// Automatically sort AngularJS app files depending on module definitions and usage
-    angularFilesort = require('gulp-angular-filesort');
+    clean = require('gulp-clean'),
+    replace = require('gulp-replace'),
+    sourcemaps = require('gulp-sourcemaps'),
+    rigger = require('gulp-rigger'),
 
-var handleErrors = require('./gulp/handleErrors'),
-    serve = require('./gulp/serve'),
-    util = require('./gulp/utils'),
-    build = require('./gulp/build');
+    rework = require('gulp-rework'),
+    reworkUrl = require('rework-plugin-url');
 
-var config = require('./gulp/config');
+var tvguide = {
+    app: 'src/main/webapp/',
+    dist: 'target/webapp_dist/',
+    test: 'src/test/javascript/spec/',
+    tmp: 'target/tmp/'
+};
+
+var exec = require('child_process').exec;
+
+gulp.task('bower-installer', function (cb) {
+    exec('bower-installer', function (err, stdout, stderr) {
+        console.log(stdout);
+        console.log(stderr);
+        cb(err);
+    });
+});
 
 gulp.task('clean', function () {
-    return del([config.dist], {dot: true});
+    return gulp.src(tvguide.dist, {read: false}).pipe(clean());
 });
 
-gulp.task('copy', function () {
+// сборка less-файлов
+gulp.task('less', function () {
+    gulp.src(tvguide.app + 'external/**/less/*.less').pipe(less()).pipe(gulp.dest(tvguide.app + 'css/external/'));
+    return gulp.src(tvguide.app + 'less/**/*.less').pipe(less()).pipe(gulp.dest(tvguide.app + 'css/'));
+});
+
+// дальше нужно склеить css-файлы в 1 для маленькой версии  и в 2 - для большой
+gulp.task('styles', ['less'], function () {
+    // CSS для маленькой версии
+    gulp.src(tvguide.app + 'css/**/small/*.css').pipe(concat('small.min.css')).pipe(minifyCss()).pipe(gulp.dest(tvguide.app + 'css/'));
+
+    // CSS для большой версии
+    gulp.src(tvguide.app + 'css/**/big/*.css').pipe(concat('big.min.css')).pipe(minifyCss()).pipe(gulp.dest(tvguide.app + 'css/'));
+    gulp.src(tvguide.app + 'external/**/*.css').pipe(concat('external.min.css')).pipe(minifyCss()).pipe(gulp.dest(tvguide.app + 'css/'));
+});
+
+
+// сложим все html-шаблоны в один js-файл
+gulp.task('ngtemplates', function () {
+    return gulp.src(tvguide.app + 'ngtemplates/**/*.html').pipe(templateCache("templates.js", {module: "tvguideApp"})).pipe(gulp.dest(tvguide.app + 'js/'));
+});
+
+// обработаем все скрипты и склеим их в два файла - свой и чужой
+gulp.task('scripts', ['ngtemplates'], function () {
+    var uglifySettings = {
+        compress: {
+            screw_ie8: true,
+            // join consecutive simple statements using the comma operator
+            sequences: true,
+            // remove unreachable code
+            dead_code: true,
+            // apply optimizations for if-s and conditional expressions
+            conditionals: true,
+            // various optimizations for boolean context, for example !!a ? b : c â†’ a ? b : c
+            booleans: true,
+            // drop unreferenced functions and variables
+            unused: true,
+            // optimizations for if/return and if/continue
+            if_return: true,
+            // join consecutive var statements
+            join_vars: true,
+            // discard calls to console.* functions
+            drop_console: true
+        }
+    };
+
+    gulp.src([tvguide.app + "external/**/*.js", "!" + tvguide.app + "external/jquery/**/*.js"])
+        .pipe(order(["angular/**/*.js"], {base: tvguide.app + "external/"}))
+        .pipe(concat('external.js'))
+        .pipe(ngAnnotate()).pipe(uglify(uglifySettings))
+        .pipe(gulp.dest(tvguide.app + 'js/final/'));
+
+    gulp.src(tvguide.app + "external/jquery/**/*.js")
+        .pipe(concat('jquery.js'))
+        .pipe(ngAnnotate()).pipe(uglify(uglifySettings))
+        .pipe(gulp.dest(tvguide.app + 'js/final/'));
+
+    return gulp.src(tvguide.app + "js/*.js")
+        .pipe(order([
+            "routes.js",
+            "application.js",
+            "services.js",
+            "controllers.js",
+            "directives.js",
+            "templates.js"
+        ], {base: tvguide.app + "js/"})).pipe(concat('tvguide.js')).pipe(ngAnnotate()).pipe(uglify(uglifySettings)).pipe(gulp.dest(tvguide.app + 'js/final/'));
+});
+
+// обработка картинок
+gulp.task('images', ['clean'], function () {
+    return gulp.src(tvguide.app + 'images/**').pipe(imagemin({optimizationLevel: 5})).pipe(gulp.dest(tvguide.dist + 'images'));
+});
+
+// кладем шрифты и картинки рядом с css-ами
+gulp.task('copy', ['clean', 'styles'], function () {
     return es.merge(
-        gulp.src(config.app + 'content/**/*.{woff,woff2,svg,ttf,eot,otf}')
-            .pipe(plumber({errorHandler: handleErrors}))
-            .pipe(changed(config.dist + 'content/fonts/'))
-            .pipe(flatten())
-            .pipe(rev())
-            .pipe(gulp.dest(config.dist + 'content/fonts/'))
-            .pipe(rev.manifest(config.revManifest, {
-                base: config.dist,
-                merge: true
-            }))
-            .pipe(gulp.dest(config.dist)),
-        gulp.src([config.app + 'robots.txt', config.app + 'favicon.ico', config.app + '.htaccess'], {dot: true})
-            .pipe(plumber({errorHandler: handleErrors}))
-            .pipe(changed(config.dist))
-            .pipe(gulp.dest(config.dist))
+        gulp.src(tvguide.app + 'i18n/**').pipe(gulp.dest(tvguide.dist + 'i18n/')),
+
+        gulp.src(tvguide.app + 'external/**/*.{woff,woff2,svg,ttf,eot}').pipe(flatten()).pipe(gulp.dest(tvguide.dist + 'css/fonts/')),
+
+        gulp.src(tvguide.app + 'external/**/*.{png,gif}').pipe(flatten()).pipe(gulp.dest(tvguide.dist + 'css/images/'))
     );
 });
 
-gulp.task('images', function () {
-    return gulp.src(config.app + 'content/images/**')
-        .pipe(plumber({errorHandler: handleErrors}))
-        .pipe(changed(config.dist + 'content/images'))
-        .pipe(imagemin({optimizationLevel: 5, progressive: true, interlaced: true}))
-        .pipe(rev())
-        .pipe(gulp.dest(config.dist + 'content/images'))
-        .pipe(rev.manifest(config.revManifest, {
-            base: config.dist,
-            merge: true
-        }))
-        .pipe(gulp.dest(config.dist))
-        .pipe(browserSync.reload({stream: true}));
-});
-
-gulp.task('sass', function () {
-    return es.merge(
-        gulp.src(config.sassSrc)
-            .pipe(plumber({errorHandler: handleErrors}))
-            .pipe(expect(config.sassSrc))
-            .pipe(changed(config.cssDir, {extension: '.css'}))
-            .pipe(sass({includePaths: config.bower}).on('error', sass.logError))
-            .pipe(gulp.dest(config.cssDir)),
-        gulp.src(config.bower + '**/fonts/**/*.{woff,woff2,svg,ttf,eot,otf}')
-            .pipe(plumber({errorHandler: handleErrors}))
-            .pipe(changed(config.app + 'content/fonts'))
-            .pipe(flatten())
-            .pipe(gulp.dest(config.app + 'content/fonts'))
-    );
-});
-
-
-gulp.task('styles', ['sass'], function () {
-    return gulp.src(config.app + 'content/css')
-        .pipe(browserSync.reload({stream: true}));
-});
-
-gulp.task('inject', function () {
-    return gulp.src(config.app + 'index.html')
-        .pipe(inject(gulp.src(config.app + 'app/**/*.js').pipe(angularFilesort()), {relative: true}))
-        .pipe(gulp.dest(config.app));
-});
-
-gulp.task('wiredep', ['wiredep:app']);
-
-gulp.task('wiredep:app', function () {
-    var stream = gulp.src(config.app + 'index.html')
-        .pipe(plumber({errorHandler: handleErrors}))
-        .pipe(wiredep({
-            exclude: [
-                /angular-i18n/,  // localizations are loaded dynamically
-                'bower_components/bootstrap-sass/assets/javascripts/' // Exclude Bootstrap js files as we use ui-bootstrap
-            ]
-        }))
-        .pipe(gulp.dest(config.app));
-
-    return es.merge(stream, gulp.src(config.sassSrc)
-        .pipe(plumber({errorHandler: handleErrors}))
-        .pipe(wiredep({
-            ignorePath: /\.\.\/webapp\/bower_components\// // remove ../webapp/bower_components/ from paths of injected sass files
-        }))
-        .pipe(gulp.dest(config.scss)));
-});
-
-gulp.task('assets:prod', ['images', 'styles', 'html'], build);
-
-gulp.task('html', function () {
-    return gulp.src(config.app + 'app/**/*.html')
-        .pipe(htmlmin({collapseWhitespace: true}))
-        .pipe(templateCache({
-            module: 'jhipsterTestApp',
-            root: 'app/',
-            moduleSystem: 'IIFE'
-        }))
-        .pipe(gulp.dest(config.tmp));
-});
-
-
-// check app for eslint errors
-gulp.task('eslint', function () {
-    return gulp.src(['gulpfile.js', config.app + 'app/**/*.js'])
-        .pipe(plumber({errorHandler: handleErrors}))
-        .pipe(eslint())
-        .pipe(eslint.format())
-        .pipe(eslint.failOnError());
-});
-
-// check app for eslint errors anf fix some of them
-gulp.task('eslint:fix', function () {
-    return gulp.src(config.app + 'app/**/*.js')
-        .pipe(plumber({errorHandler: handleErrors}))
-        .pipe(eslint({
-            fix: true
-        }))
-        .pipe(eslint.format())
-        .pipe(gulpIf(util.isLintFixed, gulp.dest(config.app + 'app')));
-});
-
-gulp.task('watch', function () {
-    gulp.watch('bower.json', ['install']);
-    gulp.watch(['gulpfile.js', 'build.gradle'], ['ngconstant:dev']);
-    gulp.watch(config.sassSrc, ['styles']);
-    gulp.watch(config.app + 'content/images/**', ['images']);
-    gulp.watch(config.app + 'app/**/*.js', ['inject']);
-    gulp.watch([config.app + '*.html', config.app + 'app/**', config.app + 'i18n/**']).on('change', browserSync.reload);
-});
-
-gulp.task('install', function () {
-    runSequence(['wiredep', 'ngconstant:dev'], 'sass', 'inject');
-});
-
-gulp.task('serve', function () {
-    runSequence('install', serve);
-});
-
-gulp.task('build', ['clean'], function (cb) {
-    runSequence(['copy', 'wiredep:app', 'ngconstant:prod'], 'inject', 'assets:prod', cb);
-});
-
-gulp.task('default', ['serve']);
+//gulp.task('default', ['bower-installer', 'copy', 'less', 'styles', 'ngtemplates', 'scripts', 'images']);
+gulp.task('default', ['copy', 'less', 'styles', 'ngtemplates', 'scripts', 'images']);

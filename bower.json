@@ -1,7 +1,55 @@
 {
-  "version": "0.0.0",
-  "name": "Svoyak",
-  "appPath": "src/main/webapp/",
+  "version": "1.0.0",
+  "name": "svoyak",
+  "authors": [
+    "aleksaad4 <aleksaad4@gmail.com>"
+  ],
+  "description": "",
+  "main": "",
+  "moduleType": [
+    "globals"
+  ],
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
   "dependencies": {
+    "jquery": "^1.7.1",
+    "angular": "^1.4.8",
+    "angular-route": "^1.4.8",
+    "angular-resource": "^1.4.8",
+    "bootstrap": "~3.3.0",
+    "angular-sanitize": "^1.4.8",
+    "angular-ui-select": "^0.13.2",
+    "angular-snap": "^1.8.5",
+    "components-font-awesome": "~4.2.0",
+    "nprogress": "^0.2.0",
+    "moment": "^2.10.6",
+    "ngInfiniteScroll": "^1.0.0"
+  },
+  "install": {
+    "base": "src/main/webapp/external",
+    "path": {
+      "css": "{name}/css",
+      "js": "{name}/js",
+      "eot": "{name}/fonts",
+      "svg": "{name}/fonts",
+      "ttf": "{name}/fonts",
+      "woff": "{name}/fonts",
+      "woff2": "{name}/fonts",
+      "png": "{name}/css"
+    },
+    "sources": {
+      "bootstrap": [
+        "src/main/webapp/bower_components/bootstrap/dist/js/bootstrap.js",
+        "src/main/webapp/bower_components/bootstrap/dist/css/bootstrap.css",
+        "src/main/webapp/bower_components/bootstrap/fonts/glyphicons-halflings-regular.*"
+      ]
+    }
   }
 }

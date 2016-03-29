@@ -1,0 +1,36 @@
+# eclipse conf file
+.settings
+.classpath
+.project
+.manager
+.scala_dependencies
+.cache
+
+# idea conf files
+.idea
+*.iml
+*.ipr
+*.iws
+
+# building
+/target
+.gradle
+
+# other
+atlassian-ide-plugin.xml
+
+
+# Dependency directory
+# https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
+node
+node_modules
+bower_components
+
+# Mac
+.DS_Store
+
+# Karaoke Project - generated files
+src/main/webapp/dist*/
+src/main/webapp/app-*
+src/main/webapp/appart-*
+src/main/webapp/choose-*
