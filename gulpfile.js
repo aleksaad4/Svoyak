@@ -1,72 +1,132 @@
 'use strict';
 
 var gulp = require('gulp'),
+//  prefix CSS with Autoprefixer
     prefix = require('gulp-autoprefixer'),
-    less = require('gulp-less'),
-    minifyCss = require('gulp-minify-css'),
-    minifyHtml = require('gulp-minify-html'),
-
-    usemin = require('gulp-usemin'),
-    uglify = require('gulp-uglify'),
-    imagemin = require('gulp-imagemin'),
+//  the gulp plugin <code>gulp-order</code> allows you to reorder a stream of files using the same syntax as of <code>gulp.src</code>
     order = require("gulp-order"),
-    templateCache = require('gulp-angular-templatecache'),
-    ngAnnotate = require('gulp-ng-annotate'),
-    jshint = require('gulp-jshint'),
-    rev = require('gulp-rev'),
+//  construct pipes of streams of events (eventStream is like functional programming meets IO)
     es = require('event-stream'),
+//  only pass through changed files
+    changed = require('gulp-changed'),
+//  live CSS Reload &amp; Browser Syncing
+    browserSync = require('browser-sync'),
+//  conditionally run a task
+    gulpIf = require('gulp-if'),
+//  expect files in pipes for gulp.js
+    expect = require('gulp-expect-file'),
+// prevent pipe breaking caused by errors from gulp plugins
+    plumber = require('gulp-plumber'),
+
+//  concatenates files
     concat = require('gulp-concat'),
+//  static asset revisioning by appending content hash to filenames: unicorn.css =&gt; unicorn-d41d8cd98f.css
+    rev = require('gulp-rev'),
+//  remove or replace relative path for files
     flatten = require('gulp-flatten'),
+//  a gulp plugin for removing files and folders
     clean = require('gulp-clean'),
+//  a string replace plugin for gulp
     replace = require('gulp-replace'),
+//  source map support for Gulp.js
     sourcemaps = require('gulp-sourcemaps'),
+
+//  gulp plugin for sass
+    sass = require('gulp-sass'),
+//  minify css with clean-css
+    cleancss = require('gulp-clean-css'),
+//  gulp plugin to minify HTML
+    htmlmin = require('gulp-htmlmin'),
+//  replaces references to non-optimized scripts or stylesheets into a set of HTML files (or any templates/views)
+    usemin = require('gulp-usemin'),
+//  minify files with UglifyJS
+    uglify = require('gulp-uglify'),
+//  minify PNG, JPEG, GIF and SVG images
+    imagemin = require('gulp-imagemin'),
+//  a gulp plugin for using rigger ("include" other files into, //= footer.html)
     rigger = require('gulp-rigger'),
 
-    rework = require('gulp-rework'),
-    reworkUrl = require('rework-plugin-url');
+//  concatenates and registers AngularJS templates in the $templateCache
+    templateCache = require('gulp-angular-templatecache'),
+//  add angularjs dependency injection annotations with ng-annotate, instead [..., $scope, $timeout, function($scope, $timeout) -> [..., function($scope, $timeout)
+    ngAnnotate = require('gulp-ng-annotate'),
 
-var tvguide = {
-    app: 'src/main/webapp/',
+//  JSHint plugin for gulp (JSHint is a tool that helps to detect errors and potential problems in your JavaScript code)
+    jshint = require('gulp-jshint');
+
+
+var config = {
+    webapp: 'src/main/webapp/',
+    content: this.webapp + 'content/',
     dist: 'target/webapp_dist/',
-    test: 'src/test/javascript/spec/',
-    tmp: 'target/tmp/'
+    distImagesDir: this.dist + "content/images/",
+    test: 'src/test/javascript/',
+    appDir: this.webapp + 'app/',
+    sassDir: this.content + 'scss/',
+    imagesDir: this.content + 'images/',
+    cssDir: this.content + 'css',
+    fontsDir: this.content + 'fonts',
+    sassSrc: this.sassDir + '/**/*.{scss,sass}',
+    htmlSrc: this.appDir + '**/*.html',
+    imagesSrc: this.imagesDir + '/**/*',
+    bower: this.webapp + 'bower_components/',
+    targetTmp: 'target/tmp/',
+    port: 9000,
+    apiPort: 8080,
+    liveReloadPort: 35729,
+    uri: 'http://localhost:'
 };
 
-var exec = require('child_process').exec;
-
-gulp.task('bower-installer', function (cb) {
-    exec('bower-installer', function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);
-        cb(err);
-    });
-});
-
+// clean task
 gulp.task('clean', function () {
-    return gulp.src(tvguide.dist, {read: false}).pipe(clean());
+    return gulp
+        .src(config.dist, {read: false})
+        .pipe(clean());
 });
 
-// сборка less-файлов
-gulp.task('less', function () {
-    gulp.src(tvguide.app + 'external/**/less/*.less').pipe(less()).pipe(gulp.dest(tvguide.app + 'css/external/'));
-    return gulp.src(tvguide.app + 'less/**/*.less').pipe(less()).pipe(gulp.dest(tvguide.app + 'css/'));
+// task для сборки sass стилей
+gulp.task('sass', function () {
+    return es.merge(
+        // берём всё sass файлы
+        gulp.src(config.sassSrc)
+            // мы ожидаем, что они есть
+            .pipe(expect(config.sassSrc))
+            //  будем заменять только те файлы, которые изменятся
+            .pipe(changed(config.cssDir, {extension: '.css'}))
+            // компилируем sass файлы
+            .pipe(sass({includePaths: config.bower}).on('error', sass.logError))
+            // сохраняем их в cssDir
+            .pipe(gulp.dest(config.cssDir)),
+        // скопируем font-ы из bower-а
+        gulp.src(config.bower + '**/fonts/**/*.{woff,woff2,svg,ttf,eot,otf}')
+            // будем заменять только те файлы, которые изменяются
+            .pipe(changed(config.fontsDir))
+            // исправляем относительные пути
+            .pipe(flatten())
+            // сохраняем шрифты в fontsDir
+            .pipe(gulp.dest(config.fontsDir))
+    );
 });
 
-// дальше нужно склеить css-файлы в 1 для маленькой версии  и в 2 - для большой
-gulp.task('styles', ['less'], function () {
-    // CSS для маленькой версии
-    gulp.src(tvguide.app + 'css/**/small/*.css').pipe(concat('small.min.css')).pipe(minifyCss()).pipe(gulp.dest(tvguide.app + 'css/'));
-
-    // CSS для большой версии
-    gulp.src(tvguide.app + 'css/**/big/*.css').pipe(concat('big.min.css')).pipe(minifyCss()).pipe(gulp.dest(tvguide.app + 'css/'));
-    gulp.src(tvguide.app + 'external/**/*.css').pipe(concat('external.min.css')).pipe(minifyCss()).pipe(gulp.dest(tvguide.app + 'css/'));
+// таск для подготовки стилей
+gulp.task('styles', ['sass'], function () {
+    return gulp.src(config.cssDir)
+        // кидаем sync
+        .pipe(browserSync.reload({stream: true}));
 });
 
-
-// сложим все html-шаблоны в один js-файл
-gulp.task('ngtemplates', function () {
-    return gulp.src(tvguide.app + 'ngtemplates/**/*.html').pipe(templateCache("templates.js", {module: "tvguideApp"})).pipe(gulp.dest(tvguide.app + 'js/'));
+// таск для подготовки html файлов
+gulp.task('html', function () {
+    // берём все наши html шаблоны
+    return gulp.src(config.htmlSrc)
+        // минимизируем html файлы
+        .pipe(htmlmin({collapseWhitespace: true}))
+        // копируем их в файл templates.js
+        .pipe(templateCache("templates.js", {module: "svoyakApp"}))
+        // копируем в targetTmp
+        .pipe(gulp.dest(config.targetTmp));
 });
+
 
 // обработаем все скрипты и склеим их в два файла - свой и чужой
 gulp.task('scripts', ['ngtemplates'], function () {
@@ -114,20 +174,27 @@ gulp.task('scripts', ['ngtemplates'], function () {
         ], {base: tvguide.app + "js/"})).pipe(concat('tvguide.js')).pipe(ngAnnotate()).pipe(uglify(uglifySettings)).pipe(gulp.dest(tvguide.app + 'js/final/'));
 });
 
-// обработка картинок
-gulp.task('images', ['clean'], function () {
-    return gulp.src(tvguide.app + 'images/**').pipe(imagemin({optimizationLevel: 5})).pipe(gulp.dest(tvguide.dist + 'images'));
-});
-
-// кладем шрифты и картинки рядом с css-ами
-gulp.task('copy', ['clean', 'styles'], function () {
-    return es.merge(
-        gulp.src(tvguide.app + 'i18n/**').pipe(gulp.dest(tvguide.dist + 'i18n/')),
-
-        gulp.src(tvguide.app + 'external/**/*.{woff,woff2,svg,ttf,eot}').pipe(flatten()).pipe(gulp.dest(tvguide.dist + 'css/fonts/')),
-
-        gulp.src(tvguide.app + 'external/**/*.{png,gif}').pipe(flatten()).pipe(gulp.dest(tvguide.dist + 'css/images/'))
-    );
+// таск по обработке картинок
+gulp.task('images', function () {
+    // все из папки imagesSrc
+    return gulp.src(config.imagesSrc)
+        // только те файлы, которые изменились
+        .pipe(changed(config.dist + 'content/images'))
+        // минимизируем картинки
+        .pipe(imagemin({optimizationLevel: 5, progressive: true, interlaced: true}))
+        // проставляем ревизию
+        .pipe(rev())
+        // копируем в distImagesDir
+        .pipe(gulp.dest(config.distImagesDir))
+        // делаем mapsource
+        .pipe(rev.manifest(config.revManifest, {
+            base: config.dist,
+            merge: true
+        }))
+        // сохраняем mapsource в dist
+        .pipe(gulp.dest(config.dist))
+        // кидаем sync
+        .pipe(browserSync.reload({stream: true}));
 });
 
 //gulp.task('default', ['bower-installer', 'copy', 'less', 'styles', 'ngtemplates', 'scripts', 'images']);

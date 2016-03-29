@@ -1,23 +1,15 @@
 {
-  "version": "1.0.0",
+  "_comment": "Bower packages file (https://github.com/bower/spec/blob/master/json.md)",
   "name": "svoyak",
   "authors": [
     "aleksaad4 <aleksaad4@gmail.com>"
   ],
-  "description": "",
-  "main": "",
-  "moduleType": [
-    "globals"
-  ],
-  "homepage": "",
+  "description": "https://ru.wikipedia.org/wiki/%D0%A1%D0%B2%D0%BE%D1%8F_%D0%B8%D0%B3%D1%80%D0%B0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aleksaad4/svoyak.git"
+  },
   "private": true,
-  "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "test",
-    "tests"
-  ],
   "dependencies": {
     "jquery": "^1.7.1",
     "angular": "^1.4.8",
@@ -31,25 +23,5 @@
     "nprogress": "^0.2.0",
     "moment": "^2.10.6",
     "ngInfiniteScroll": "^1.0.0"
-  },
-  "install": {
-    "base": "src/main/webapp/external",
-    "path": {
-      "css": "{name}/css",
-      "js": "{name}/js",
-      "eot": "{name}/fonts",
-      "svg": "{name}/fonts",
-      "ttf": "{name}/fonts",
-      "woff": "{name}/fonts",
-      "woff2": "{name}/fonts",
-      "png": "{name}/css"
-    },
-    "sources": {
-      "bootstrap": [
-        "src/main/webapp/bower_components/bootstrap/dist/js/bootstrap.js",
-        "src/main/webapp/bower_components/bootstrap/dist/css/bootstrap.css",
-        "src/main/webapp/bower_components/bootstrap/fonts/glyphicons-halflings-regular.*"
-      ]
-    }
   }
 }

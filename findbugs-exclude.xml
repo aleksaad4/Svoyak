@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- http://findbugs.sourceforge.net/manual/filter.html -->
 <FindBugsFilter>
-    <!--
-        <Match>
-            &lt;!&ndash; Временно отключаем ругань на mutable поля в getters/setters/constructors &ndash;&gt;
-            <Or>
-                <Bug pattern="EI_EXPOSE_REP"/>
-                <Bug pattern="EI_EXPOSE_REP2"/>
-            </Or>
-        </Match>
-    -->
-
     <Match>
         <!-- Отключаем проверку nonnull полей не инициализированных из конструкторов (нужно для entity - т.к. нужен protected пустой конструктор) -->
         <Bug pattern="NP_NONNULL_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
