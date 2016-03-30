@@ -3,8 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/Svoyak.iml" filepath="$PROJECT_DIR$/.idea/modules/Svoyak.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Svoyak_main.iml" filepath="$PROJECT_DIR$/.idea/modules/Svoyak_main.iml" group="Svoyak" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Svoyak_test.iml" filepath="$PROJECT_DIR$/.idea/modules/Svoyak_test.iml" group="Svoyak" />
     </modules>
   </component>
 </project>
