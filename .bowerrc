@@ -1,6 +1,5 @@
 {
   "_comment": "Bower configuration file (https://github.com/bower/spec/blob/master/config.md)",
-
-  "_comment_directory": "The path in which installed components should be saved. If not specified this defaults to bower_components"
+  "_comment_directory": "The path in which installed components should be saved. If not specified this defaults to bower_components",
   "directory": "src/main/webapp/bower_components"
 }
