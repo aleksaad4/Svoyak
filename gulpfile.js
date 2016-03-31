@@ -1,5 +1,7 @@
 'use strict';
 
+// https://habrahabr.ru/post/252745/
+
 var gulp = require('gulp'),
 //  prefix CSS with Autoprefixer
     prefix = require('gulp-autoprefixer'),
@@ -45,6 +47,8 @@ var gulp = require('gulp'),
     imagemin = require('gulp-imagemin'),
 //  a gulp plugin for using rigger ("include" other files into, //= footer.html)
     rigger = require('gulp-rigger'),
+// less
+    less = require('gulp-less'),
 
 //  concatenates and registers AngularJS templates in the $templateCache
     templateCache = require('gulp-angular-templatecache'),
@@ -55,158 +59,118 @@ var gulp = require('gulp'),
     jshint = require('gulp-jshint');
 
 
-var config = {
-    webapp: 'src/main/webapp/',
-    content: this.webapp + 'content/',
-    dist: 'target/webapp_dist/',
-    distImagesDir: this.dist + "content/images/",
-    test: 'src/test/javascript/',
-    appDir: this.webapp + 'app/',
-    sassDir: this.content + 'scss/',
-    imagesDir: this.content + 'images/',
-    cssDir: this.content + 'css',
-    fontsDir: this.content + 'fonts',
-    sassSrc: this.sassDir + '/**/*.{scss,sass}',
-    htmlSrc: this.appDir + '**/*.html',
-    imagesSrc: this.imagesDir + '/**/*',
-    bower: this.webapp + 'bower_components/',
-    targetTmp: 'target/tmp/',
-    port: 9000,
-    apiPort: 8080,
-    liveReloadPort: 35729,
-    uri: 'http://localhost:'
-};
+var targetSource = 'build/webapp/';
+var targetResources = 'build/resources/main/static/';
+var webapp = 'src/main/webapp/';
+var sassPattern = '/**/*.{scss,sass}';
+var lessPattern = '/**/*.less';
+var cssPattern = '/**/*.css';
+var jsPattern = '/**/*.js';
+var imagesPattern = '/**/*';
+var htmlPattern = '/**/*.html';
+var bowerDir = webapp + 'bower_components/';
+var styles = 'styles.css';
+var js = 'script.js';
 
-// clean task - очищаем папку dist
+function getApp(appName) {
+    return {
+        css: appName + 'css/',
+        sass: appName + 'scss/',
+        less: appName + 'less/',
+        fonts: appName + 'fonts/',
+        images: appName + 'images/',
+        html: appName + 'html/',
+        js: appName + 'js/',
+        compiledCss: appName + 'compiledCss/'
+    }
+}
+
+var app = getApp('app/game/');
+
+// clean task - очищаем папку webapp в target
 gulp.task('clean', function () {
     return gulp
-        .src(config.dist, {read: false})
+    // можно не читать содержимое папки, нам всё равно щас её просто удалять
+        .src([targetSource, targetResources], {read: false})
+        // удаляем
         .pipe(clean());
 });
 
 // task для сборки sass стилей
 gulp.task('sass', function () {
     return es.merge(
-        // берём всё sass файлы
-        gulp.src(config.sassSrc)
-            // мы ожидаем, что они есть
-            .pipe(expect(config.sassSrc))
+        // берём всё sass файлы в папке app.sass
+        gulp.src(webapp + app.sass + sassPattern)
             //  будем заменять только те файлы, которые изменятся
-            .pipe(changed(config.cssDir, {extension: '.css'}))
+            .pipe(changed(targetResources + app.compiledCss, {extension: '.css'}))
             // компилируем sass файлы
-            .pipe(sass({includePaths: config.bower}).on('error', sass.logError))
+            .pipe(sass({includePaths: bowerDir}).on('error', sass.logError))
             // сохраняем их в cssDir
-            // todo: сохранять generated файлы в другую папку
-            .pipe(gulp.dest(config.cssDir)),
+            .pipe(gulp.dest(targetResources + app.compiledCss)),
         // скопируем font-ы из bower-а
-        gulp.src(config.bower + '**/fonts/**/*.{woff,woff2,svg,ttf,eot,otf}')
+        gulp.src(bowerDir + '**/fonts/**/*.{woff,woff2,svg,ttf,eot,otf}')
             // будем заменять только те файлы, которые изменяются
-            .pipe(changed(config.fontsDir))
+            .pipe(changed(targetResources + app.fonts))
             // исправляем относительные пути
             .pipe(flatten())
-            // todo: сохранять generated файлы в другую папку
-            // сохраняем шрифты в fontsDir
-            .pipe(gulp.dest(config.fontsDir))
+            // сохраняем шрифты в fonts
+            .pipe(gulp.dest(targetResources + app.fonts))
     );
 });
 
+// task для сборки less-файлов
+gulp.task('less', function () {
+    return gulp.src(webapp + app.less + lessPattern)
+        .pipe(less())
+        .pipe(gulp.dest(targetResources + app.compiledCss));
+});
+
+// таск для копирования шрифтов
+gulp.task('fonts', function () {
+    return gulp.src(webapp + app.fonts)
+        .pipe(gulp.dest(webapp + app.fonts));
+});
+
 // таск для подготовки стилей
-gulp.task('styles', ['sass'], function () {
-    // todo: тут какая то хрень, мы ж не таргет поменяли?
-    return gulp.src(config.cssDir)
-        // кидаем sync
-        .pipe(browserSync.reload({stream: true}));
+gulp.task('styles', ['sass', 'less'], function () {
+    return gulp.src([webapp + app.css + cssPattern, targetResources + app.compiledCss + cssPattern])
+        .pipe(concat(styles,{newLine: '\n'}))
+        .pipe(cleancss())
+        .pipe(gulp.dest(targetResources + app.css))
+    //.pipe(browserSync.reload());
 });
 
 // таск для подготовки html файлов
 gulp.task('html', function () {
     // берём все наши html шаблоны
-    return gulp.src(config.htmlSrc)
+    return gulp.src(webapp + app.html + htmlPattern)
         // минимизируем html файлы
         .pipe(htmlmin({collapseWhitespace: true}))
-        // копируем их в файл templates.js
-        .pipe(templateCache("templates.js", {module: "svoyakApp"}))
-        // копируем в targetTmp
-        // todo: сохранять в папку ко всем скриптам в таргете?
-        .pipe(gulp.dest(config.targetTmp));
+        .pipe(gulp.dest(targetSource + app.html));
 });
 
-// todo: к коду выше использовать параметры из этого таска???
 // обработаем все скрипты и склеим их в два файла - свой и чужой
-gulp.task('scripts', ['ngtemplates'], function () {
-    var uglifySettings = {
-        compress: {
-            screw_ie8: true,
-            // join consecutive simple statements using the comma operator
-            sequences: true,
-            // remove unreachable code
-            dead_code: true,
-            // apply optimizations for if-s and conditional expressions
-            conditionals: true,
-            // various optimizations for boolean context, for example !!a ? b : c â†’ a ? b : c
-            booleans: true,
-            // drop unreferenced functions and variables
-            unused: true,
-            // optimizations for if/return and if/continue
-            if_return: true,
-            // join consecutive var statements
-            join_vars: true,
-            // discard calls to console.* functions
-            drop_console: true
-        }
-    };
-
-    // todo: написать таск по обработке скриптов
-    gulp.src([tvguide.app + "external/**/*.js", "!" + tvguide.app + "external/jquery/**/*.js"])
-        .pipe(order(["angular/**/*.js"], {base: tvguide.app + "external/"}))
-        .pipe(concat('external.js'))
-        .pipe(ngAnnotate()).pipe(uglify(uglifySettings))
-        .pipe(gulp.dest(tvguide.app + 'js/final/'));
-
-    gulp.src(tvguide.app + "external/jquery/**/*.js")
-        .pipe(concat('jquery.js'))
-        .pipe(ngAnnotate()).pipe(uglify(uglifySettings))
-        .pipe(gulp.dest(tvguide.app + 'js/final/'));
-
-    return gulp.src(tvguide.app + "js/*.js")
-        .pipe(order([
-            "routes.js",
-            "application.js",
-            "services.js",
-            "controllers.js",
-            "directives.js",
-            "templates.js"
-        ], {base: tvguide.app + "js/"})).pipe(concat('tvguide.js')).pipe(ngAnnotate()).pipe(uglify(uglifySettings)).pipe(gulp.dest(tvguide.app + 'js/final/'));
+gulp.task('scripts', function () {
+    return gulp.src(webapp + app.js + jsPattern)
+        .pipe(concat(js, {newLine: '\n'}))
+        .pipe(uglify())
+        .pipe(gulp.dest(targetResources + app.js));
 });
 
-// todo: написать таск копирующий css-ы в таргет
-
-// todo: подумать как быть с картинками и куда их складывать лучше и как это задать
 // таск по обработке картинок
 gulp.task('images', function () {
-    // все из папки imagesSrc
-    return gulp.src(config.imagesSrc)
+    // все из папки images
+    return gulp.src(webapp + app.images + imagesPattern)
         // только те файлы, которые изменились
-        .pipe(changed(config.dist + 'content/images'))
+        .pipe(changed(targetSource + app.images))
         // минимизируем картинки
         .pipe(imagemin({optimizationLevel: 5, progressive: true, interlaced: true}))
         // проставляем ревизию
         .pipe(rev())
-        // копируем в distImagesDir
-        .pipe(gulp.dest(config.distImagesDir))
-        // делаем mapsource
-        .pipe(rev.manifest(config.revManifest, {
-            base: config.dist,
-            merge: true
-        }))
-        // сохраняем mapsource в dist
-        .pipe(gulp.dest(config.dist))
-        // кидаем sync
-        .pipe(browserSync.reload({stream: true}));
+        // копируем в target
+        .pipe(gulp.dest(targetSource + app.images))
+    // кидаем sync
+    //.pipe(browserSync.reload());
 });
 
-// todo: разобраться с дефолтным таском 
-//gulp.task('default', ['bower-installer', 'copy', 'less', 'styles', 'ngtemplates', 'scripts', 'images']);
-gulp.task('default', ['copy', 'less', 'styles', 'ngtemplates', 'scripts', 'images']);
-
-// todo: собственно написать copy скрипт?
+gulp.task('default', ['less', 'sass', 'styles', 'fonts', 'scripts', 'images', 'html']);
