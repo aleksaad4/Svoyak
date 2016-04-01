@@ -19,6 +19,8 @@ var gulp = require('gulp'),
     expect = require('gulp-expect-file'),
 // prevent pipe breaking caused by errors from gulp plugins
     plumber = require('gulp-plumber'),
+    gutil = require('gulp-util'),
+    env = require('gulp-env'),
 
 //  concatenates files
     concat = require('gulp-concat'),
@@ -58,7 +60,7 @@ var gulp = require('gulp'),
 //  JSHint plugin for gulp (JSHint is a tool that helps to detect errors and potential problems in your JavaScript code)
     jshint = require('gulp-jshint');
 
-
+var isDev = true;
 var targetSource = 'build/webapp/';
 var targetResources = 'build/resources/main/static/';
 var webapp = 'src/main/webapp/';
@@ -134,7 +136,7 @@ gulp.task('fonts', function () {
 // таск для подготовки стилей
 gulp.task('styles', ['sass', 'less'], function () {
     return gulp.src([webapp + app.css + cssPattern, targetResources + app.compiledCss + cssPattern])
-        .pipe(concat(styles,{newLine: '\n'}))
+        .pipe(concat(styles, {newLine: '\n'}))
         .pipe(cleancss())
         .pipe(gulp.dest(targetResources + app.css))
     //.pipe(browserSync.reload());
@@ -168,9 +170,18 @@ gulp.task('images', function () {
         // проставляем ревизию
         .pipe(rev())
         // копируем в target
-        .pipe(gulp.dest(targetSource + app.images))
+        .pipe(gulp.dest(targetSource + app.images));
     // кидаем sync
     //.pipe(browserSync.reload());
 });
 
-gulp.task('default', ['less', 'sass', 'styles', 'fonts', 'scripts', 'images', 'html']);
+// основной таск для сборки (по умолчанию dev режим)
+gulp.task('build', ['less', 'sass', 'styles', 'fonts', 'scripts', 'images', 'html']);
+
+// таск для сборки в prod режиме
+gulp.task('prod', function () {
+    // скидываем флаг
+    isDev = false;
+    // вызываем основной таск
+    gulp.start('build');
+});

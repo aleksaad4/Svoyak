@@ -1,7 +1,4 @@
 buildscript {
-    ext {
-        springBootVersion = '1.3.3.RELEASE'
-    }
     repositories {
         mavenLocal()
         jcenter()
@@ -10,26 +7,39 @@ buildscript {
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-        classpath group: 'com.moowork.gradle', name: 'gradle-node-plugin', version: '0.12'
-        classpath group: 'com.moowork.gradle', name: 'gradle-gulp-plugin', version: '0.12'
-
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:1.3.3.RELEASE"
+        classpath "com.moowork.gradle:gradle-node-plugin:0.12"
+        classpath "com.moowork.gradle:gradle-gulp-plugin:0.12"
+        classpath "gradle.plugin.com.craigburke.gradle:bower-installer-gradle:2.5.1"
     }
 }
 
 apply plugin: 'java'
-apply plugin: 'eclipse-wtp'
 apply plugin: 'spring-boot'
-apply plugin: 'war'
 apply plugin: 'com.moowork.gulp'
-defaultTasks 'bootRun'
+apply plugin: "com.craigburke.bower-installer"
+apply plugin: 'findbugs'
+apply plugin: 'checkstyle'
+apply plugin: 'pmd'
 
-
-war {
-    baseName = 'svoyak'
-    version = '0.0.1-SNAPSHOT'
-    rootSpec.exclude("**/tomcat-*.jar")
+checkstyle {
+    configFile = file('codequality/checkstyle-minimal.xml')
+    ignoreFailures = true
 }
+
+pmd {
+    ignoreFailures = true
+}
+
+findbugs {
+    ignoreFailures = true
+}
+
+tasks.withType(FindBugs) {
+    excludeFilter = file("codequality/findbugs-exclude.xml")
+}
+
+defaultTasks 'bootRun'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -46,7 +56,6 @@ dependencies {
     compile('org.springframework.boot:spring-boot-starter-aop')
     compile('org.springframework.boot:spring-boot-starter-data-jpa')
     compile('org.springframework.boot:spring-boot-starter-data-rest')
-    compile('org.springframework.boot:spring-boot-devtools')
     compile('org.springframework.boot:spring-boot-starter-jdbc')
     compile('org.springframework.boot:spring-boot-starter-mobile')
     compile('org.springframework.boot:spring-boot-starter-security')
@@ -54,9 +63,10 @@ dependencies {
     compile('org.springframework.boot:spring-boot-starter-validation')
     compile('org.springframework.boot:spring-boot-starter-web')
     compile('org.springframework.boot:spring-boot-starter-websocket')
+    compile "org.springframework.boot:spring-boot-devtools"
+    compile "org.springframework.boot:spring-boot-starter-tomcat"
     runtime('com.h2database:h2')
     runtime('org.postgresql:postgresql')
-    providedRuntime('org.springframework.boot:spring-boot-starter-tomcat')
     testCompile('org.springframework.boot:spring-boot-starter-test')
     compile('javax.inject:javax.inject:1')
     compile(group: 'org.hibernate', name: 'hibernate-ehcache')
@@ -98,5 +108,32 @@ clean {
     delete "target"
 }
 
-task stage(dependsOn: 'bootRepackage') {
+// настрйоки для девелоперского профиля
+def logbackLoglevel = 'DEBUG';
+def dpProfile = 'dev';
+
+// если запускаем с prod профилем -> обновляем настройки
+if (project.hasProperty('dbprofile') && project.property('dbprofile') == 'prod') {
+    logbackLoglevel = 'INFO';
+    dpProfile = 'prod';
 }
+
+bootRun {
+    args = ["--spring.profiles.active=" + dpProfile]
+}
+
+task setProdProperties(dependsOn: bootRun) << {
+    doFirst {
+        System.setProperty('spring.profiles.active', dpProfile)
+    }
+}
+
+processResources {
+    filesMatching('**/logback-**') {
+        filter {
+            it.replace('@logback.loglevel@', logbackLoglevel)
+        }
+    }
+}
+
+bootRun.dependsOn 'gulp_' + (dpProfile == 'prod' ? 'prod' : 'build')

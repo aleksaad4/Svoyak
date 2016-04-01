@@ -39,8 +39,8 @@ public class App {
             LOG.info("Running with Spring profile(s) : {}", Arrays.toString(env.getActiveProfiles()));
             final Collection<String> activeProfiles = Arrays.asList(env.getActiveProfiles());
             if (activeProfiles.contains(Constants.SPRING_PROFILE_DEVELOPMENT) && activeProfiles.contains(Constants.SPRING_PROFILE_PRODUCTION)) {
-                LOG.error("You have misconfigured your application! " +
-                    "It should not run with both the 'dev' and 'prod' profiles at the same time.");
+                LOG.error("You have misconfigured your application! "
+                        + "It should not run with both the 'dev' and 'prod' profiles at the same time.");
             }
         }
     }
@@ -56,22 +56,22 @@ public class App {
         final SimpleCommandLinePropertySource source = new SimpleCommandLinePropertySource(args);
         addDefaultProfile(app, source);
         final Environment env = app.run(args).getEnvironment();
-        LOG.info("\n----------------------------------------------------------\n\t" +
-                "Application '{}' is running! Access URLs:\n\t" +
-                "Local: \t\thttp://127.0.0.1:{}\n\t" +
-                "External: \thttp://{}:{}\n----------------------------------------------------------",
-            env.getProperty("spring.application.name"),
-            env.getProperty("server.port"),
-            InetAddress.getLocalHost().getHostAddress(),
-            env.getProperty("server.port"));
+        LOG.info("\n----------------------------------------------------------\n\t"
+                        + "Application '{}' is running! Access URLs:\n\t"
+                        + "Local: \t\thttp://127.0.0.1:{}\n\t"
+                        + "External: \thttp://{}:{}\n----------------------------------------------------------",
+                env.getProperty("spring.application.name"),
+                env.getProperty("server.port"),
+                InetAddress.getLocalHost().getHostAddress(),
+                env.getProperty("server.port"));
     }
 
     /**
      * If no profile has been configured, set by default the "dev" profile.
      */
     private static void addDefaultProfile(@Nonnull final SpringApplication app, @Nonnull final SimpleCommandLinePropertySource source) {
-        if (!source.containsProperty("spring.profiles.active") &&
-            !System.getenv().containsKey("SPRING_PROFILES_ACTIVE")) {
+        if (!source.containsProperty("spring.profiles.active")
+                && !System.getenv().containsKey("SPRING_PROFILES_ACTIVE")) {
             app.setAdditionalProfiles(Constants.SPRING_PROFILE_DEVELOPMENT);
         }
     }
