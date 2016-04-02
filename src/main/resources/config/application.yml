@@ -28,3 +28,9 @@ spring:
 security:
     basic:
         enabled: false
+
+
+loaders:
+    chgk:
+      tours-url: "http://db.chgk.info/tour/SVOYAK/xml"
+      topic-template-url: "http://db.chgk.info/tour/tourName/xml"

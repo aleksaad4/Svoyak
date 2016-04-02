@@ -23,7 +23,6 @@ spring:
         username: svoyak
         password:
     jpa:
-        database-platform: ru.ad4.jhipstertest.domain.util.FixedH2Dialect
         database: H2
         show_sql: true
         properties:
@@ -42,3 +41,7 @@ security:
     basic:
         enabled: false
 
+loaders:
+    chgk:
+      tours-url: "http://db.chgk.info/tour/SVOYAK/xml"
+      topic-template-url: "http://db.chgk.info/tour/tourName/xml"
