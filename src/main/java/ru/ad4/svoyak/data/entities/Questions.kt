@@ -1,6 +1,7 @@
 package ru.ad4.svoyak.data.entities
 
 import java.util.*
+import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
@@ -11,6 +12,7 @@ enum class SourceType {
 
 @Entity
 data class Tour(
+        @Column(unique = true)
         var name: String = "",
         var sourceType: SourceType = SourceType.DB_CHGK_INFO,
 
@@ -23,6 +25,7 @@ data class Tour(
 
 @Entity
 data class Topic(
+        @Column(length = 512)
         var name: String = "",
         var tourId: Long = 0,
 
@@ -35,6 +38,7 @@ data class Topic(
 
 @Entity
 data class Question(
+        @Column(length = 1024)
         var text: String = "",
         var topicId: Long = 0,
 
@@ -48,6 +52,7 @@ data class Question(
 
 @Entity
 data class Answer(
+        @Column(length = 1024)
         var text: String = "",
         var moderated: Boolean = false,
         var questionId: Long = 0,

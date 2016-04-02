@@ -36,7 +36,7 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
         return SourceType.DB_CHGK_INFO
     }
 
-    override fun load() {
+    override fun load(): Boolean {
         Logger.info(this, "Load topics and questions from CHGK..")
 
         try {
@@ -50,7 +50,7 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
                 try {
                     tourList.add(loadTour(it))
                 } catch(e: Exception) {
-                    Logger.warn(this, "FAIL, can't load question for tour [$it], skip it")
+                    Logger.warn(this, "FAIL, can't load question for tour [$it], cause exception [$e] with stack trace [${e.getStackTrace()}], skip it")
                 }
             }
             Logger.debug(this, "Get topics for [$tourNames.size] tours")
@@ -59,8 +59,10 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
             qService.saveTours(tourList)
 
             Logger.info(this, "OK, success load and save topics and questions from CHGK");
+            return true;
         } catch(e: Exception) {
             Logger.error(this, "FAIL, can't load topics and questions from CHGK, catch exception [$e] with stack trace [${e.getStackTrace()}]")
+            return false;
         }
     }
 
@@ -116,8 +118,8 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
                 // добавляем тему с вопросами
                 topicList.add(Topic(topicName, 0, 0, qList))
             } else {
-                // регулярки не сматчились
-                throw RuntimeException("Answer or question not matches regular expression in tour [$tourTextId]")
+                // регулярки не сматчились, пропускаем эту тематику
+                Logger.debug(this, "FAIL, can't add topic on index [$i] in tour [$tourTextId], answer[$answers] or question [$questions] not matches, skip this topic")
             }
         }
 

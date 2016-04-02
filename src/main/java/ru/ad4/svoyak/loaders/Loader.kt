@@ -19,7 +19,7 @@ interface Loader {
     /**
      * Загрузка вопросов из источника и сохранение их в БД
      */
-    fun load()
+    fun load(): Boolean
 }
 
 /**
