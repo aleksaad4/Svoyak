@@ -3,17 +3,15 @@ package ru.ad4.svoyak.loaders.chgk
 import com.jcabi.log.Logger
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import org.w3c.dom.Document
 import ru.ad4.svoyak.data.entities.*
 import ru.ad4.svoyak.data.services.QuestionsService
 import ru.ad4.svoyak.loaders.Loader
 import ru.ad4.svoyak.loaders.beautiful
 import ru.ad4.svoyak.loaders.getStackTrace
-import java.net.URL
+import ru.ad4.svoyak.loaders.xmlFromUrl
 import java.util.*
 import java.util.regex.Pattern
 import javax.inject.Inject
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Загрузчик вопросов с сайта ЧГК
@@ -69,7 +67,7 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
     /**
      * Загружаем вопросы по турниру с данным названием (textId)
      */
-    fun loadTour(tourTextId: String): Tour {
+    private fun loadTour(tourTextId: String): Tour {
         Logger.debug(this, "Load questions for tour [$tourTextId]")
 
         // получаем xml из url-а (подставляем textId вместо 'tourName')
@@ -131,7 +129,7 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
     /**
      * Получение списка названий турниров, из которых можно получить вопросы
      */
-    fun loadTourNames(): List<String> {
+    private fun loadTourNames(): List<String> {
         Logger.debug(this, "Load tours list..")
 
         val topicNames = ArrayList<String>()
@@ -147,14 +145,5 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
 
         Logger.debug(this, "OK, load [$topicNames.size] tours")
         return topicNames
-    }
-
-    /**
-     * Функция для получения XML по url-у
-     */
-    fun xmlFromUrl(url: String): Document {
-        return DocumentBuilderFactory.newInstance()
-                .newDocumentBuilder()
-                .parse(URL(url).openStream());
     }
 }

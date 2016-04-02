@@ -1,8 +1,11 @@
 package ru.ad4.svoyak.loaders
 
+import org.w3c.dom.Document
 import ru.ad4.svoyak.data.entities.SourceType
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.net.URL
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Интерфейс для загрузки вопросов с удалённого ресурса
@@ -36,4 +39,13 @@ fun Exception.getStackTrace(): String {
     val pw = PrintWriter(sw);
     this.printStackTrace(pw);
     return sw.toString();
+}
+
+/**
+ * Функция для получения XML по url-у
+ */
+fun xmlFromUrl(url: String): Document {
+    return DocumentBuilderFactory.newInstance()
+            .newDocumentBuilder()
+            .parse(URL(url).openStream());
 }
