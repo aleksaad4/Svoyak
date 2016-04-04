@@ -12,8 +12,8 @@ import java.util.*
 import javax.inject.Inject
 import javax.transaction.Transactional
 
-@Transactional
 @Service
+@Transactional
 open class QuestionsService @Inject constructor(val qRepo: QuestionRepo,
                                                 val aRepo: AnswerRepo,
                                                 val tourRepo: TourRepo,
