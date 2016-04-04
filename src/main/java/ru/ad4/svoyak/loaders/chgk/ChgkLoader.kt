@@ -58,11 +58,11 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
             // сохранение загруженных давнных в БД
             qService.saveTours(tourList)
 
-            Logger.info(this, "OK, success load and save topics and questions from CHGK");
-            return true;
+            Logger.info(this, "OK, success load and save topics and questions from CHGK")
+            return true
         } catch(e: Exception) {
             Logger.error(this, "FAIL, can't load topics and questions from CHGK, catch exception [$e] with stack trace [${e.getStackTrace()}]")
-            return false;
+            return false
         }
     }
 
@@ -101,7 +101,7 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
 
             if (qM.matches() && aM.matches()) {
                 // название темы
-                val topicName = qM.group(1).beautiful();
+                val topicName = qM.group(1).beautiful()
 
                 // список вопросов в теме
                 val qList = ArrayList<Question>()

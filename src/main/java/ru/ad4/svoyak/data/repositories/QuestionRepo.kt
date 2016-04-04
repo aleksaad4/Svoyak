@@ -10,10 +10,14 @@ interface TourRepo : JpaRepository<Tour, Long> {
 }
 
 interface TopicRepo : JpaRepository<Topic, Long> {
+    fun findByName(topicName: String): List<Topic>
 }
 
 interface QuestionRepo : JpaRepository<Question, Long> {
+    fun findByTopicId(topicId: Long): List<Question>
+
 }
 
 interface AnswerRepo : JpaRepository<Answer, Long> {
+    fun findByQuestionId(topicId: Long): List<Answer>
 }

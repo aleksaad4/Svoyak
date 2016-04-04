@@ -35,10 +35,10 @@ fun String.beautiful(): String {
  * Функция получения stack trac-а экспешена как строки
  */
 fun Exception.getStackTrace(): String {
-    val sw = StringWriter();
-    val pw = PrintWriter(sw);
-    this.printStackTrace(pw);
-    return sw.toString();
+    val sw = StringWriter()
+    val pw = PrintWriter(sw)
+    this.printStackTrace(pw)
+    return sw.toString()
 }
 
 /**
@@ -47,5 +47,5 @@ fun Exception.getStackTrace(): String {
 fun xmlFromUrl(url: String): Document {
     return DocumentBuilderFactory.newInstance()
             .newDocumentBuilder()
-            .parse(URL(url).openStream());
+            .parse(URL(url).openStream())
 }
