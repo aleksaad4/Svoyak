@@ -9,8 +9,8 @@ import javax.inject.Inject
 import javax.transaction.Transactional
 
 
-@Transactional
 @Service
+@Transactional
 class GameService @Inject constructor(val gameRepo: GameRepo,
                                       val playerRepo: PlayerRepo,
                                       val levelRepo: LevelRepo,
