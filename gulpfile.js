@@ -139,8 +139,7 @@ gulp.task('styles', ['sass', 'less'], function () {
         .pipe(csslint.reporter())
         .pipe(gulpIf(!isDev, rev()))
         .pipe(gulp.dest(targetResources + app.css))
-        .pipe(gulpIf(!isDev, rev.manifest({merge: true})))
-        .pipe(gulp.dest(targetResources + app.base))
+        .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)))
         .pipe(browserSync.reload({stream: true}));
 });
 
@@ -164,8 +163,7 @@ gulp.task('scripts', function () {
         .pipe(gulpIf(!isDev, uglify()))
         .pipe(gulpIf(!isDev, rev()))
         .pipe(gulp.dest(targetResources + app.js))
-        .pipe(gulpIf(!isDev, rev.manifest({merge: true})))
-        .pipe(gulp.dest(targetResources + app.base));
+        .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)));
 });
 
 // таск по обработке картинок
@@ -180,31 +178,19 @@ gulp.task('images', function () {
         .pipe(gulpIf(!isDev, rev()))
         // копируем в target
         .pipe(gulp.dest(targetSource + app.images))
-        .pipe(gulpIf(!isDev, rev.manifest({merge: true})))
-        .pipe(gulp.dest(targetResources + app.base));
+        .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)));
     // кидаем sync
     //.pipe(browserSync.reload());
 });
 
-
-gulp.task('serve', function () {
-
-    // browserSync.init({
-    //     open: true,
-    //     port: 8080,
-    //     server: {
-    //         baseDir: targetSource
-    //     }
-    // });
-
-  gulp.watch(webapp + app.css + cssPattern, ['styles']);
-
-    //gulp.watch(webapp + app.less + lessPattern, ['styles']);
-    //gulp.watch(webapp + app.sass + sassPattern, ['styles']);
-    // gulp.watch(webapp + app.css + cssPattern, ['sass']);
-    // gulp.watch(webapp + app.images + imagesPattern, ['images']);
-    // gulp.watch(webapp + app.js + jsPattern, ['scripts']);
-    // gulp.watch(webapp + app.html + htmlPattern, ['html']).on('change', browserSync.reload);
+gulp.task('watch', function () {
+    gulp.watch(webapp + app.css + cssPattern, ['styles']);
+    gulp.watch(webapp + app.less + lessPattern, ['styles']);
+    gulp.watch(webapp + app.sass + sassPattern, ['styles']);
+    gulp.watch(webapp + app.css + cssPattern, ['sass']);
+    gulp.watch(webapp + app.images + imagesPattern, ['images']);
+    gulp.watch(webapp + app.js + jsPattern, ['scripts']);
+    gulp.watch(webapp + app.html + htmlPattern, ['html']);
 });
 
 // основной таск для сборки (по умолчанию dev режим)
