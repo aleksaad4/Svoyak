@@ -3,29 +3,21 @@
 // https://habrahabr.ru/post/252745/
 
 var gulp = require('gulp'),
-//  prefix CSS with Autoprefixer
-    prefix = require('gulp-autoprefixer'),
-//  the gulp plugin <code>gulp-order</code> allows you to reorder a stream of files using the same syntax as of <code>gulp.src</code>
-    order = require("gulp-order"),
 //  construct pipes of streams of events (eventStream is like functional programming meets IO)
     es = require('event-stream'),
 //  only pass through changed files
     changed = require('gulp-changed'),
 //  live CSS Reload &amp; Browser Syncing
-    browserSync = require('browser-sync'),
+    browserSync = require('browser-sync'),//.create(),
 //  conditionally run a task
     gulpIf = require('gulp-if'),
-//  expect files in pipes for gulp.js
-    expect = require('gulp-expect-file'),
-// prevent pipe breaking caused by errors from gulp plugins
-    plumber = require('gulp-plumber'),
-    gutil = require('gulp-util'),
-    env = require('gulp-env'),
 
 //  concatenates files
     concat = require('gulp-concat'),
 //  static asset revisioning by appending content hash to filenames: unicorn.css =&gt; unicorn-d41d8cd98f.css
     rev = require('gulp-rev'),
+    revreplace = require("gulp-rev-replace"),
+
 //  remove or replace relative path for files
     flatten = require('gulp-flatten'),
 //  a gulp plugin for removing files and folders
@@ -38,7 +30,7 @@ var gulp = require('gulp'),
 //  gulp plugin for sass
     sass = require('gulp-sass'),
 //  minify css with clean-css
-    cleancss = require('gulp-clean-css'),
+    csso = require('gulp-csso'),
 //  gulp plugin to minify HTML
     htmlmin = require('gulp-htmlmin'),
 //  replaces references to non-optimized scripts or stylesheets into a set of HTML files (or any templates/views)
@@ -51,16 +43,19 @@ var gulp = require('gulp'),
     rigger = require('gulp-rigger'),
 // less
     less = require('gulp-less'),
+//  prefix CSS with Autoprefixer
+    prefix = require('gulp-autoprefixer'),
 
-//  concatenates and registers AngularJS templates in the $templateCache
-    templateCache = require('gulp-angular-templatecache'),
-//  add angularjs dependency injection annotations with ng-annotate, instead [..., $scope, $timeout, function($scope, $timeout) -> [..., function($scope, $timeout)
-    ngAnnotate = require('gulp-ng-annotate'),
 
 //  JSHint plugin for gulp (JSHint is a tool that helps to detect errors and potential problems in your JavaScript code)
-    jshint = require('gulp-jshint');
+    jshint = require('gulp-jshint'),
+    htmlhint = require('gulp-htmlhint'),
+    csslint = require('gulp-csslint');
+
 
 var isDev = true;
+
+
 var targetSource = 'build/webapp/';
 var targetResources = 'build/resources/main/static/';
 var webapp = 'src/main/webapp/';
@@ -83,7 +78,8 @@ function getApp(appName) {
         images: appName + 'images/',
         html: appName + 'html/',
         js: appName + 'js/',
-        compiledCss: appName + 'compiledCss/'
+        compiledCss: appName + 'compiledCss/',
+        base: appName
     }
 }
 
@@ -137,9 +133,15 @@ gulp.task('fonts', function () {
 gulp.task('styles', ['sass', 'less'], function () {
     return gulp.src([webapp + app.css + cssPattern, targetResources + app.compiledCss + cssPattern])
         .pipe(concat(styles, {newLine: '\n'}))
-        .pipe(cleancss())
+        .pipe(prefix())
+        .pipe(gulpIf(!isDev, csso()))
+        .pipe(csslint())
+        .pipe(csslint.reporter())
+        .pipe(gulpIf(!isDev, rev()))
         .pipe(gulp.dest(targetResources + app.css))
-    //.pipe(browserSync.reload());
+        .pipe(gulpIf(!isDev, rev.manifest({merge: true})))
+        .pipe(gulp.dest(targetResources + app.base))
+        .pipe(browserSync.reload({stream: true}));
 });
 
 // таск для подготовки html файлов
@@ -147,7 +149,9 @@ gulp.task('html', function () {
     // берём все наши html шаблоны
     return gulp.src(webapp + app.html + htmlPattern)
         // минимизируем html файлы
-        .pipe(htmlmin({collapseWhitespace: true}))
+        .pipe(gulpIf(!isDev, htmlmin({collapseWhitespace: true})))
+        .pipe(htmlhint()).pipe(htmlhint.reporter())
+        .pipe(gulpIf(!isDev, revreplace({manifest: gulp.src(targetResources + app.base + "rev-manifest.json")})))
         .pipe(gulp.dest(targetSource + app.html));
 });
 
@@ -155,8 +159,13 @@ gulp.task('html', function () {
 gulp.task('scripts', function () {
     return gulp.src(webapp + app.js + jsPattern)
         .pipe(concat(js, {newLine: '\n'}))
-        .pipe(uglify())
-        .pipe(gulp.dest(targetResources + app.js));
+        .pipe(jshint())
+        .pipe(jshint.reporter())
+        .pipe(gulpIf(!isDev, uglify()))
+        .pipe(gulpIf(!isDev, rev()))
+        .pipe(gulp.dest(targetResources + app.js))
+        .pipe(gulpIf(!isDev, rev.manifest({merge: true})))
+        .pipe(gulp.dest(targetResources + app.base));
 });
 
 // таск по обработке картинок
@@ -168,15 +177,41 @@ gulp.task('images', function () {
         // минимизируем картинки
         .pipe(imagemin({optimizationLevel: 5, progressive: true, interlaced: true}))
         // проставляем ревизию
-        .pipe(rev())
+        .pipe(gulpIf(!isDev, rev()))
         // копируем в target
-        .pipe(gulp.dest(targetSource + app.images));
+        .pipe(gulp.dest(targetSource + app.images))
+        .pipe(gulpIf(!isDev, rev.manifest({merge: true})))
+        .pipe(gulp.dest(targetResources + app.base));
     // кидаем sync
     //.pipe(browserSync.reload());
 });
 
+
+gulp.task('serve', function () {
+
+    // browserSync.init({
+    //     open: true,
+    //     port: 8080,
+    //     server: {
+    //         baseDir: targetSource
+    //     }
+    // });
+
+  gulp.watch(webapp + app.css + cssPattern, ['styles']);
+
+    //gulp.watch(webapp + app.less + lessPattern, ['styles']);
+    //gulp.watch(webapp + app.sass + sassPattern, ['styles']);
+    // gulp.watch(webapp + app.css + cssPattern, ['sass']);
+    // gulp.watch(webapp + app.images + imagesPattern, ['images']);
+    // gulp.watch(webapp + app.js + jsPattern, ['scripts']);
+    // gulp.watch(webapp + app.html + htmlPattern, ['html']).on('change', browserSync.reload);
+});
+
 // основной таск для сборки (по умолчанию dev режим)
 gulp.task('build', ['less', 'sass', 'styles', 'fonts', 'scripts', 'images', 'html']);
+
+// таск для сборки в dev режиме
+gulp.task('dev', ['build']);
 
 // таск для сборки в prod режиме
 gulp.task('prod', function () {

@@ -55,6 +55,7 @@ data class Answer(
         @Column(length = 1024)
         var text: String = "",
         var moderated: Boolean = false,
+        var correct: Boolean = true,
         var questionId: Long = 0,
 
         @Id @GeneratedValue

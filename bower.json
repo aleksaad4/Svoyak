@@ -11,17 +11,9 @@
   },
   "private": true,
   "dependencies": {
-    "jquery": "^1.7.1",
-    "angular": "^1.4.8",
-    "angular-route": "^1.4.8",
-    "angular-resource": "^1.4.8",
-    "bootstrap": "~3.3.0",
-    "angular-sanitize": "^1.4.8",
-    "angular-ui-select": "^0.13.2",
-    "angular-snap": "^1.8.5",
-    "components-font-awesome": "~4.2.0",
-    "nprogress": "^0.2.0",
-    "moment": "^2.10.6",
-    "ngInfiniteScroll": "^1.0.0"
+    "jquery": "latest",
+    "angular": "latest",
+    "bootstrap": "latest",
+    "material-design-lite": "latest"
   }
 }

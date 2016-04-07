@@ -80,8 +80,8 @@ public class QuestionsServiceIntTest {
 
     @Nonnull
     private Tour genTestTour(@Nonnull final String answerText) {
-        final Answer answer1 = new Answer(answerText, true, 0, 0);
-        final Answer answer2 = new Answer("Ответ #2", false, 0, 0);
+        final Answer answer1 = new Answer(answerText, true, false, 0, 0);
+        final Answer answer2 = new Answer("Ответ #2", false, true, 0, 0);
         final Question question = new Question("Вопрос #1", 0, 0, Arrays.asList(answer1, answer2));
         final Topic topic = new Topic("Тестовая тематика", 0, 0, Collections.singletonList(question));
         return new Tour("Тестовый турнир", SourceType.DB_CHGK_INFO, 0, Collections.singletonList(topic));

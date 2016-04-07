@@ -141,4 +141,4 @@ processResources {
     }
 }
 
-bootRun.dependsOn 'gulp_' + (dpProfile == 'prod' ? 'prod' : 'build')
+bootRun.dependsOn 'gulp_' + (dpProfile == 'prod' ? 'prod' : 'dev')
