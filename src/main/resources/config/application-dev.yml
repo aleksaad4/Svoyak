@@ -16,19 +16,18 @@ spring:
         restart:
             enabled: true
         livereload:
-            enabled: false # we use gulp + BrowserSync for livereload
+            enabled: false
     datasource:
-        url: jdbc:h2:mem:svoyak;DB_CLOSE_DELAY=-1
-        name:
-        username: svoyak
-        password:
+        url: jdbc:postgresql://localhost:5432/svoyak
+        username: postgres
+        password: postgres
     jpa:
-        database: H2
-        show_sql: true
+        database: POSTGRESQL
+        show_sql: false
         properties:
             hibernate.cache.use_second_level_cache: true
             hibernate.cache.use_query_cache: false
-            hibernate.generate_statistics: true
+            hibernate.generate_statistics: false
             hibernate.cache.region.factory_class: org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory
     thymeleaf:
         cache: false

@@ -4,7 +4,6 @@ import org.w3c.dom.Document
 import ru.ad4.svoyak.data.entities.SourceType
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -47,5 +46,5 @@ fun Exception.getStackTrace(): String {
 fun xmlFromUrl(url: String): Document {
     return DocumentBuilderFactory.newInstance()
             .newDocumentBuilder()
-            .parse(URL(url).openStream())
+            .parse(url)
 }

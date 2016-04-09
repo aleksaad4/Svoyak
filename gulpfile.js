@@ -1,14 +1,10 @@
 'use strict';
 
-// https://habrahabr.ru/post/252745/
-
 var gulp = require('gulp'),
 //  construct pipes of streams of events (eventStream is like functional programming meets IO)
     es = require('event-stream'),
 //  only pass through changed files
     changed = require('gulp-changed'),
-//  live CSS Reload &amp; Browser Syncing
-    browserSync = require('browser-sync'),//.create(),
 //  conditionally run a task
     gulpIf = require('gulp-if'),
 
@@ -16,16 +12,10 @@ var gulp = require('gulp'),
     concat = require('gulp-concat'),
 //  static asset revisioning by appending content hash to filenames: unicorn.css =&gt; unicorn-d41d8cd98f.css
     rev = require('gulp-rev'),
+// update links with rev number after gulp-rev
     revreplace = require("gulp-rev-replace"),
-
-//  remove or replace relative path for files
-    flatten = require('gulp-flatten'),
 //  a gulp plugin for removing files and folders
     clean = require('gulp-clean'),
-//  a string replace plugin for gulp
-    replace = require('gulp-replace'),
-//  source map support for Gulp.js
-    sourcemaps = require('gulp-sourcemaps'),
 
 //  gulp plugin for sass
     sass = require('gulp-sass'),
@@ -46,29 +36,45 @@ var gulp = require('gulp'),
 //  prefix CSS with Autoprefixer
     prefix = require('gulp-autoprefixer'),
 
-
 //  JSHint plugin for gulp (JSHint is a tool that helps to detect errors and potential problems in your JavaScript code)
     jshint = require('gulp-jshint'),
+//  htmlhint wrapper for gulp to validate your HTML
     htmlhint = require('gulp-htmlhint'),
+//  CSSLint plugin for gulp
     csslint = require('gulp-csslint');
 
-
+/**
+ * Dev mode or prod mode
+ * @type {boolean}
+ */
 var isDev = true;
 
 
+// target для html и images
 var targetSource = 'build/webapp/';
+// target для ресурсов (js, css, font)
 var targetResources = 'build/resources/main/static/';
+// source files
 var webapp = 'src/main/webapp/';
+// шаблоны для разных типов файлов
 var sassPattern = '/**/*.{scss,sass}';
 var lessPattern = '/**/*.less';
 var cssPattern = '/**/*.css';
 var jsPattern = '/**/*.js';
 var imagesPattern = '/**/*';
 var htmlPattern = '/**/*.html';
+// path to bower components
 var bowerDir = webapp + 'bower_components/';
+// output style file
 var styles = 'styles.css';
+// output js file
 var js = 'script.js';
 
+/**
+ * Переменная для "приложения" (отдельной части интерфейсов)
+ * @param appName название
+ * @returns {{css: string, sass: string, less: string, fonts: string, images: string, html: string, js: string, compiledCss: string, base: *}}
+ */
 function getApp(appName) {
     return {
         css: appName + 'css/',
@@ -83,7 +89,7 @@ function getApp(appName) {
     }
 }
 
-var app = getApp('app/game/');
+var apps = [getApp('app/game/'), getApp('app/admin/')];
 
 // clean task - очищаем папку webapp в target
 gulp.task('clean', function () {
@@ -94,103 +100,145 @@ gulp.task('clean', function () {
         .pipe(clean());
 });
 
+/**
+ * Запуск таска для всех "приложениЙ" (частей интерфейса)
+ * @param taskFunction функция для каждого приложения
+ * @returns {*|Map|Object} stream for return from gulp task
+ */
+var runTaskForAllApps = function (taskFunction) {
+    // собираем массив из стримов
+    var streams = [];
+    for (var i = 0; i < apps.length; i++) {
+        // для каждого таска кладем его стрим в массив
+        streams.push(taskFunction(apps[i]));
+    }
+    // мержим стримы в один и возвращаем
+    return es.merge(streams);
+};
+
 // task для сборки sass стилей
 gulp.task('sass', function () {
-    return es.merge(
+    return runTaskForAllApps(function (app) {
         // берём всё sass файлы в папке app.sass
-        gulp.src(webapp + app.sass + sassPattern)
+        return gulp.src(webapp + app.sass + sassPattern)
             //  будем заменять только те файлы, которые изменятся
             .pipe(changed(targetResources + app.compiledCss, {extension: '.css'}))
             // компилируем sass файлы
             .pipe(sass({includePaths: bowerDir}).on('error', sass.logError))
-            // сохраняем их в cssDir
-            .pipe(gulp.dest(targetResources + app.compiledCss)),
-        // скопируем font-ы из bower-а
-        gulp.src(bowerDir + '**/fonts/**/*.{woff,woff2,svg,ttf,eot,otf}')
-            // будем заменять только те файлы, которые изменяются
-            .pipe(changed(targetResources + app.fonts))
-            // исправляем относительные пути
-            .pipe(flatten())
-            // сохраняем шрифты в fonts
-            .pipe(gulp.dest(targetResources + app.fonts))
-    );
+            // сохраняем их в css compiled dir
+            .pipe(gulp.dest(targetResources + app.compiledCss));
+    })
 });
 
 // task для сборки less-файлов
 gulp.task('less', function () {
-    return gulp.src(webapp + app.less + lessPattern)
-        .pipe(less())
-        .pipe(gulp.dest(targetResources + app.compiledCss));
+    return runTaskForAllApps(function (app) {
+        // берём все less файлы в папке app.less
+        return gulp.src(webapp + app.less + lessPattern)
+            //  будем заменять только те файлы, которые изменятся
+            .pipe(changed(targetResources + app.compiledCss, {extension: '.css'}))
+            // компилируем less файлы
+            .pipe(less())
+            // сохраняем их в css compiled dir
+            .pipe(gulp.dest(targetResources + app.compiledCss));
+    })
 });
 
 // таск для копирования шрифтов
 gulp.task('fonts', function () {
-    return gulp.src(webapp + app.fonts)
-        .pipe(gulp.dest(webapp + app.fonts));
+    return runTaskForAllApps(function (app) {
+        // просто копируем шрифты из src to dest
+        return gulp.src(webapp + app.fonts)
+            .pipe(gulp.dest(targetResources + app.fonts));
+    })
 });
 
 // таск для подготовки стилей
 gulp.task('styles', ['sass', 'less'], function () {
-    return gulp.src([webapp + app.css + cssPattern, targetResources + app.compiledCss + cssPattern])
-        .pipe(concat(styles, {newLine: '\n'}))
-        .pipe(prefix())
-        .pipe(gulpIf(!isDev, csso()))
-        .pipe(csslint())
-        .pipe(csslint.reporter())
-        .pipe(gulpIf(!isDev, rev()))
-        .pipe(gulp.dest(targetResources + app.css))
-        .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)))
-        .pipe(browserSync.reload({stream: true}));
+    return runTaskForAllApps(function (app) {
+        // берём все css из css complied dir и app css
+        return gulp.src([webapp + app.css + cssPattern, targetResources + app.compiledCss + cssPattern])
+            // склеиваем их через новую строку
+            .pipe(concat(styles, {newLine: '\n'}))
+            // пропускаем через автопрефиксер
+            .pipe(prefix())
+            // если !devMode, то минифицируем/оптимизируем
+            .pipe(gulpIf(!isDev, csso()))
+            // запускаем lint
+            .pipe(csslint()).pipe(csslint.reporter())
+            // если !devMode, то добавляем к файлу номер ревизии и не забываем про манифест
+            .pipe(gulpIf(!isDev, rev()))
+            .pipe(gulp.dest(targetResources + app.css))
+            .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)))
+    });
 });
 
 // таск для подготовки html файлов
 gulp.task('html', function () {
-    // берём все наши html шаблоны
-    return gulp.src(webapp + app.html + htmlPattern)
-        // минимизируем html файлы
-        .pipe(gulpIf(!isDev, htmlmin({collapseWhitespace: true})))
-        .pipe(htmlhint()).pipe(htmlhint.reporter())
-        .pipe(gulpIf(!isDev, revreplace({manifest: gulp.src(targetResources + app.base + "rev-manifest.json")})))
-        .pipe(gulp.dest(targetSource + app.html));
+    return runTaskForAllApps(function (app) {
+            // берём все наши html шаблоны
+            return gulp.src(webapp + app.html + htmlPattern)
+                // пропускаем через rigger
+                .pipe(rigger())
+                // если !devMode, то минимизируем html файлы
+                .pipe(gulpIf(!isDev, htmlmin({collapseWhitespace: true})))
+                // запускаем hit
+                .pipe(htmlhint()).pipe(htmlhint.reporter())
+                // если !devMode, заменяем ссылки на ресурсы согласно манифесту
+                .pipe(gulpIf(!isDev, revreplace({manifest: gulp.src(targetResources + app.base + "rev-manifest.json")})))
+                .pipe(gulp.dest(targetSource + app.html));
+        }
+    )
 });
 
-// обработаем все скрипты и склеим их в два файла - свой и чужой
+// таск для подготовки скриптов
 gulp.task('scripts', function () {
-    return gulp.src(webapp + app.js + jsPattern)
-        .pipe(concat(js, {newLine: '\n'}))
-        .pipe(jshint())
-        .pipe(jshint.reporter())
-        .pipe(gulpIf(!isDev, uglify()))
-        .pipe(gulpIf(!isDev, rev()))
-        .pipe(gulp.dest(targetResources + app.js))
-        .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)));
+    return runTaskForAllApps(function (app) {
+            // берём все скриптовые файлы
+            return gulp.src(webapp + app.js + jsPattern)
+                // склеиваем в один
+                .pipe(concat(js, {newLine: '\n'}))
+                // hinter
+                .pipe(jshint()).pipe(jshint.reporter())
+                // если !devMode, то минифицируем
+                .pipe(gulpIf(!isDev, uglify()))
+                // если !devMode, то добавляем к файлу номер ревизии и не забываем про манифест
+                .pipe(gulpIf(!isDev, rev()))
+                .pipe(gulp.dest(targetResources + app.js))
+                .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)));
+        }
+    )
 });
 
 // таск по обработке картинок
 gulp.task('images', function () {
-    // все из папки images
-    return gulp.src(webapp + app.images + imagesPattern)
-        // только те файлы, которые изменились
-        .pipe(changed(targetSource + app.images))
-        // минимизируем картинки
-        .pipe(imagemin({optimizationLevel: 5, progressive: true, interlaced: true}))
-        // проставляем ревизию
-        .pipe(gulpIf(!isDev, rev()))
-        // копируем в target
-        .pipe(gulp.dest(targetSource + app.images))
-        .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)));
-    // кидаем sync
-    //.pipe(browserSync.reload());
+    return runTaskForAllApps(function (app) {
+            // все из папки images
+            return gulp.src(webapp + app.images + imagesPattern)
+                // только те файлы, которые изменились
+                .pipe(changed(targetSource + app.images))
+                // минимизируем картинки
+                .pipe(imagemin({optimizationLevel: 5, progressive: true, interlaced: true}))
+                // если !devMode, то добавляем к файлу номер ревизии и не забываем про манифест
+                .pipe(gulpIf(!isDev, rev()))
+                .pipe(gulp.dest(targetSource + app.images))
+                .pipe(gulpIf(!isDev, rev.manifest({merge: true}), gulp.dest(targetResources + app.base)));
+        }
+    )
 });
 
+// таск отслеживающий изменения во всех файлах (ну кроме шрифтов)
 gulp.task('watch', function () {
-    gulp.watch(webapp + app.css + cssPattern, ['styles']);
-    gulp.watch(webapp + app.less + lessPattern, ['styles']);
-    gulp.watch(webapp + app.sass + sassPattern, ['styles']);
-    gulp.watch(webapp + app.css + cssPattern, ['sass']);
-    gulp.watch(webapp + app.images + imagesPattern, ['images']);
-    gulp.watch(webapp + app.js + jsPattern, ['scripts']);
-    gulp.watch(webapp + app.html + htmlPattern, ['html']);
+    for (var i = 0; i < apps.length; i++) {
+        var app = apps[i];
+        gulp.watch(webapp + app.css + cssPattern, ['styles']);
+        gulp.watch(webapp + app.less + lessPattern, ['styles']);
+        gulp.watch(webapp + app.sass + sassPattern, ['styles']);
+        gulp.watch(webapp + app.css + cssPattern, ['sass']);
+        gulp.watch(webapp + app.images + imagesPattern, ['images']);
+        gulp.watch(webapp + app.js + jsPattern, ['scripts']);
+        gulp.watch(webapp + app.html + htmlPattern, ['html']);
+    }
 });
 
 // основной таск для сборки (по умолчанию dev режим)

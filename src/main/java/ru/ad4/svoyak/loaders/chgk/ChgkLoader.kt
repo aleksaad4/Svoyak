@@ -22,14 +22,14 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
                                      /**
                                       * Ссылка для получения списка турниров (с вопросами)
                                       */
-                                     @Value("\${loaders.chgk.tours-url}")
+                                     @Value("\${svoyak.loaders.chgk.tours-url}")
                                      val toursUrl: String,
 
                                      /**
                                       * Шаблон ссылки для загрузки вопрос из турнира
                                       * tourName в url-е нужно заменить на реальное навазние турнира
                                       */
-                                     @Value("\${loaders.chgk.topic-template-url:}")
+                                     @Value("\${svoyak.loaders.chgk.topic-template-url:}")
                                      val topicTemplateUrl: String) : Loader {
 
     override fun source(): SourceType {
@@ -105,7 +105,7 @@ class ChgkLoader @Inject constructor(val qService: QuestionsService,
 
                 // список вопросов в теме
                 val qList = ArrayList<Question>()
-                for (j in 2..5) {
+                for (j in 2..6) {
                     // вопрос
                     val q = qM.group(j).beautiful()
                     // ответ

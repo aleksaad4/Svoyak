@@ -1,6 +1,8 @@
 package ru.ad4.svoyak.data.services
 
 import com.jcabi.log.Logger
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.stereotype.Service
 import ru.ad4.svoyak.data.entities.User
 import ru.ad4.svoyak.data.repositories.UserRepo

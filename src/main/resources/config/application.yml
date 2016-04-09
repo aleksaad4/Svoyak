@@ -29,8 +29,10 @@ security:
     basic:
         enabled: false
 
-
-loaders:
-    chgk:
-      tours-url: "http://db.chgk.info/tour/SVOYAK/xml"
-      topic-template-url: "http://db.chgk.info/tour/tourName/xml"
+svoyak:
+  loaders:
+      chgk:
+        tours-url: "http://db.chgk.info/tour/SVOYAK/xml"
+        topic-template-url: "http://db.chgk.info/tour/tourName/xml"
+  security:
+    remember-me-key: 8b54080f07886b424a86ccb63134d0b57df5ca74

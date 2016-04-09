@@ -18,10 +18,9 @@ spring:
         livereload:
             enabled: false
     datasource:
-        url: jdbc:postgresql://localhost:5432/Svoyak
-        name:
-        username: Svoyak
-        password:
+        url: jdbc:postgresql://localhost:5432/svoyak
+        username: postgres
+        password: postgres
     jpa:
         database: POSTGRESQL
         show_sql: false
