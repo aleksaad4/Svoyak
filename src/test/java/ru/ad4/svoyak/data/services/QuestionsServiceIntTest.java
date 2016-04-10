@@ -34,7 +34,7 @@ public class QuestionsServiceIntTest {
     private QuestionsService questionsService;
 
     @Rule
-    private ExpectedException exception = ExpectedException.none();
+    public ExpectedException exception = ExpectedException.none();
 
     @Test
     public void testQuestionServiceSelect() {

@@ -8,4 +8,4 @@ import org.springframework.transaction.annotation.EnableTransactionManagement
 @Configuration
 @EnableJpaRepositories("ru.ad4.svoyak.data.repositories")
 @EnableTransactionManagement(mode = AdviceMode.ASPECTJ)
-class DatabaseConfiguration
+open class DatabaseConfiguration

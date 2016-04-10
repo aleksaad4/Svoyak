@@ -116,6 +116,15 @@ var runTaskForAllApps = function (taskFunction) {
     return es.merge(streams);
 };
 
+// task для копирования bower component
+gulp.task('bower-components', function () {
+    // берём всё файлы из bower_components
+    return gulp.src(webapp + bowerDir + "**/*")
+        // сохраняем их в bower_components в target
+        .pipe(gulp.dest(targetResources + bowerDir));
+});
+
+
 // task для сборки sass стилей
 gulp.task('sass', function () {
     return runTaskForAllApps(function (app) {
@@ -124,7 +133,7 @@ gulp.task('sass', function () {
             //  будем заменять только те файлы, которые изменятся
             .pipe(changed(targetResources + app.compiledCss, {extension: '.css'}))
             // компилируем sass файлы
-            .pipe(sass({includePaths: bowerDir}).on('error', sass.logError))
+            .pipe(sass().on('error', sass.logError))
             // сохраняем их в css compiled dir
             .pipe(gulp.dest(targetResources + app.compiledCss));
     })
@@ -239,10 +248,11 @@ gulp.task('watch', function () {
         gulp.watch(webapp + app.js + jsPattern, ['scripts']);
         gulp.watch(webapp + app.html + htmlPattern, ['html']);
     }
+    gulp.watch(webapp + bowerDir + "**/*", ['bower-components']);
 });
 
 // основной таск для сборки (по умолчанию dev режим)
-gulp.task('build', ['less', 'sass', 'styles', 'fonts', 'scripts', 'images', 'html']);
+gulp.task('build', ['bower-components', 'less', 'sass', 'styles', 'fonts', 'scripts', 'images', 'html']);
 
 // таск для сборки в dev режиме
 gulp.task('dev', ['build']);

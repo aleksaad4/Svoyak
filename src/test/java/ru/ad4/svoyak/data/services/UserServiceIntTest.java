@@ -1,69 +1,83 @@
 package ru.ad4.svoyak.data.services;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.IntegrationTest;
 import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlGroup;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import ru.ad4.svoyak.App;
-import ru.ad4.svoyak.data.entities.Game;
-import ru.ad4.svoyak.data.entities.PlayerType;
+import ru.ad4.svoyak.data.entities.AuthToken;
 import ru.ad4.svoyak.data.entities.User;
 
 import javax.inject.Inject;
+import java.time.LocalDate;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = App.class)
 @WebAppConfiguration
 @IntegrationTest
-@SqlGroup({@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:sql/beforeTestRun.sql"),
-        @Sql(executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, scripts = "classpath:sql/afterTestRun.sql")})
+@SqlGroup({@Sql(executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, scripts = "classpath:sql/afterTestRun.sql")})
 public class UserServiceIntTest {
 
     @Inject
     private UserService userService;
 
-    @Inject
-    private GameService gameService;
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     @Test
-    public void testUserService() {
+    public void testUser() {
+        // ищём, но ещё нет
+        final User user1 = userService.findUserByLogin("daa");
+        Assert.assertNull(user1);
+
+        // создание
+        final User user2 = userService.createUser("daa", "123123");
+        Assert.assertNotNull(user2);
+        Assert.assertTrue(user2.getId() != 0);
+
+        // ищём то, что создали
+        final User user3 = userService.findUserByLogin("daa");
+        Assert.assertEquals(user2, user3);
+
+        // проверяем, что нельзя создать пользователей с одинаковым логином
+        final User user4 = userService.createUser("daa", "12");
+        Assert.assertNull(user4);
+    }
+
+    @Test
+    public void testAuthToken() {
+        // создаём юзера
         final User user = userService.createUser("daa", "123123");
         Assert.assertNotNull(user);
 
-        // создаём игру и проверяем что в ней все корректно заполнено
-        final Game game = gameService.createGame(user);
-        Assert.assertFalse(game.getFinished());
-        Assert.assertEquals(game.getLevelIndex(), 1);
-        Assert.assertEquals(user.getId(), game.getUserId());
-        // что есть уровни
-        Assert.assertFalse(game.getLevels().isEmpty());
-        // что есть игроки
-        Assert.assertFalse(game.getPlayers().isEmpty());
-        // что есть темы, в них вопросы, а вних ответы
-        Assert.assertEquals(game.getId(), game.getLevels().get(0).getGameId());
-        Assert.assertEquals(1, game.getLevels().get(0).getIndex());
-        Assert.assertFalse(game.getLevels().get(0).getFinished());
-        // level topics
-        Assert.assertFalse(game.getLevels().get(0).getLevelTopics().isEmpty());
-        Assert.assertEquals(game.getLevels().get(0).getId(),
-                game.getLevels().get(0).getLevelTopics().get(0).getLevelId());
-        // game question
-        Assert.assertFalse(game.getLevels().get(0).getLevelTopics().get(0).getGameQuestions().isEmpty());
-        Assert.assertEquals(game.getLevels().get(0).getLevelTopics().get(0).getId(),
-                game.getLevels().get(0).getLevelTopics().get(0).getGameQuestions().get(0).getLevelTopicId());
-        Assert.assertFalse(game.getLevels().get(0).getLevelTopics().get(0).getGameQuestions().get(0).getQuestion().isEmpty());
-        Assert.assertFalse(game.getLevels().get(0).getLevelTopics().get(0).getGameQuestions().get(0)
-                .getQuestion().get(0).getAnswerList().isEmpty());
-        // что среди игроков есть user и это текущий user
-        Assert.assertEquals(user.getId(), game.getPlayers().get(0).getUserId());
-        Assert.assertEquals(PlayerType.USER, game.getPlayers().get(0).getType());
-        Assert.assertEquals(game.getId(), game.getPlayers().get(0).getGameId());
-        Assert.assertEquals(user.getLogin(), game.getPlayers().get(0).getName());
-        Assert.assertEquals(game.getLevels().get(0).getTurnPlayerId(), game.getPlayers().get(0).getId());
+        // создаём токен
+        final AuthToken token1 = new AuthToken("token", LocalDate.now(), "127.0.0.1", "android", user, "series");
+        final AuthToken token2 = userService.saveAuthToken(token1);
+        Assert.assertNotNull(token2);
+
+        // ищем то, что создали
+        final AuthToken token3 = userService.findAuthToken("series");
+        Assert.assertNotNull(token3);
+        Assert.assertNotNull(token3.getUser());
+
+        // пытаемся сохранить второй раз
+        exception.expect(DuplicateKeyException.class);
+        final AuthToken token4 = new AuthToken("token", LocalDate.now(), "127.0.0.1", "android", user, "series");
+        final AuthToken token5 = userService.saveAuthToken(token4);
+        Assert.assertNull(token5);
+
+        // удаляем token1
+        userService.removeAuthToken(token1);
+        // не находим то, что удалили
+        final AuthToken token6 = userService.findAuthToken("token");
+        Assert.assertNull(token6);
     }
 }

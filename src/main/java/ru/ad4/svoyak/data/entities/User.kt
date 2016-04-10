@@ -1,9 +1,7 @@
 package ru.ad4.svoyak.data.entities
 
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.GeneratedValue
-import javax.persistence.Id
+import java.time.LocalDate
+import javax.persistence.*
 
 @Entity
 data class User(
@@ -13,4 +11,19 @@ data class User(
 
         @Id @GeneratedValue
         var id: Long = 0
+)
+
+@Entity
+data class AuthToken(
+        var tokenValue: String = "",
+        var tokenDate: LocalDate = LocalDate.now(),
+        var ipAddr: String = "",
+        var ua: String = "",
+
+        @ManyToOne
+        @JoinColumn(name = "user_id")
+        var user: User = User(),
+
+        @Id
+        var series: String = ""
 )

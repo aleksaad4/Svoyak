@@ -1,17 +1,19 @@
 package ru.ad4.svoyak.data.services
 
 import com.jcabi.log.Logger
-import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
+import ru.ad4.svoyak.data.entities.AuthToken
 import ru.ad4.svoyak.data.entities.User
+import ru.ad4.svoyak.data.repositories.TokenRepo
 import ru.ad4.svoyak.data.repositories.UserRepo
 import javax.inject.Inject
 import javax.transaction.Transactional
 
 @Service
 @Transactional
-class UserService @Inject constructor(val userRepo: UserRepo) {
+class UserService @Inject constructor(val userRepo: UserRepo,
+                                      val tokenRepo: TokenRepo) {
 
     /**
      * Создение нового пользователя c указанным логином и паролем
@@ -51,5 +53,47 @@ class UserService @Inject constructor(val userRepo: UserRepo) {
             Logger.debug(this, "OK, get [${byLogin[0]}] user")
             return byLogin[0]
         }
+    }
+
+    /**
+     * Поиск auth token-а по id
+     */
+    fun findAuthToken(token: String): AuthToken? {
+        Logger.debug(this, "Find auth token [$token]")
+
+        // ищем по id
+        val t = tokenRepo.findOne(token)
+
+        Logger.debug(this, "OK, get [$t]")
+        return t
+    }
+
+    /**
+     * Удаление auth token-а
+     */
+    fun removeAuthToken(token: AuthToken) {
+        Logger.debug(this, "Remove auth token [$token]")
+
+        // удаляем
+        tokenRepo.delete(token)
+    }
+
+    /**
+     * Создание авторизационного токена
+     */
+    @Synchronized
+    fun saveAuthToken(token: AuthToken): AuthToken {
+        Logger.debug(this, "Save auth token [$token]")
+
+        // пытаемся найти такой токен
+        val sameToken = findAuthToken(token.series)
+        if (sameToken != null) {
+            throw DuplicateKeyException("Duplicate key [${token.series}] during save token [$token], same token is [$sameToken]")
+        }
+
+        // сохраняем
+        val saved = tokenRepo.save(token)
+        Logger.debug(this, "OK, saved token [$token]");
+        return saved;
     }
 }

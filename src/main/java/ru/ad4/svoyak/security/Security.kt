@@ -118,7 +118,7 @@ class CustomAccessDeniedHandler : AccessDeniedHandler {
 /**
  * Returns a 401 error code (Unauthorized) to the client.
  */
-@Component
+@Service
 class Http401UnauthorizedEntryPoint : AuthenticationEntryPoint {
 
     /**

@@ -14,6 +14,6 @@ class AdminController @Inject constructor(
 
     @RequestMapping("/loadChgk")
     fun start() {
-        chgkLoader.load();
+        chgkLoader.load()
     }
 }
